@@ -3,69 +3,58 @@
 Copyright (C) 2026 Spoony Panda. Licensed under the GNU General Public License
 version 3 (`GPL-3.0-only`); see [LICENSE.txt](LICENSE.txt).
 
-A Forge mod for Minecraft 1.12.2 to play music while you use an AE2-UEL crank or an Extra Utilities 2 Manual Mill. Both integrations are optional.
-Music on the Manual Mill fades with its spin-down when you stop turning it. 
-You can right click with Records or custom made Compact Discs using resource packs with 
-ogg files to add more. Right click with paper (or another item set in the config) to clear
-the song.
+Play music while turning an AE2 Wooden Crank, Create Hand Crank, or Hand Crank Generator.
+Forge 1.20.1 development build.
 
-Press **Ctrl+M** to mute or unmute crank music for yourself. Change the shortcut
-under **Options > Controls > Spin Me Round**.
+All three crank mods are optional; install whichever you want to use.
+Create 0.5.1 and 6.x share the integration, so the
+same Spin Me Round jar targets both families. Headless server tests pass with Create
+0.5.1.i and 6.0.8. Local LAN playback and note effects have been checked with Create
+6.0.8; the remaining client integration checks are in progress.
+
+Right-click a supported crank with a vanilla/modded music disc or a Compact Disc to
+assign its song. The disc is not consumed. Turn the crank with an empty hand to listen.
+Right-click with paper to clear its song. Each crank remembers its own selection.
+Music fades when you stop turning and resumes from the saved position on the next turn.
+Hand Crank Generator advances music when its handle actually changes position.
+Create valve handles and other rotating machines are not included.
+
+Ctrl+M mutes crank music locally without stopping its shared timeline;
+change the shortcut under Options > Controls > Spin Me Round. Records and Master
+volume settings apply. Background Music fades while a nearby crank is audible.
 
 ## Config Settings
 
-Config is in `config/spinmeround.cfg` after running for the first time.
+World settings are in `serverconfig/spinmeround-server.toml` inside the world folder
+(single player: `saves/<world>/serverconfig/`). Forge synchronizes these settings to
+joining clients. Put a preset in `defaultconfigs/spinmeround-server.toml` to use it
+for new worlds. Under `[playback]`:
 
-```text
-playback {
-    S:record=
-    S:sound=
-    S:clearItem=minecraft:paper
-    I:volume=100
-    B:loop=true
-}
-```
+- `record`: default disc item ID, optionally followed by NBT; empty by default.
+- `sound`: default sound event ID when `record` is empty; empty by default.
+- `clearItem`: reusable clearing item, default `minecraft:paper`.
+- `volume`: crank volume from 0 to 100, default 100.
+- `loop`: repeat songs, default true.
+- `graceTicks`: bridge gaps between turns, default 4 ticks.
+- `fadeTicks`: fade in/out duration, default 6 ticks.
+- `fadeBackgroundMusic`: locally fade background music, default true.
 
-The `record` variable accepts a vanilla or modded music disc item registry ID. To use a
-sound event from a resource pack instead, leave `record` empty and put its resource
-ID in `sound`. Both settings default to empty, so unassigned cranks are silent. Existing configs
-keep their values when upgrading; clear both settings to disable an old default track.
-
-To make a tagged Compact Disc the default, append its item NBT to its registry ID:
-
-```text
-S:record=spinmeround:compact_disc{Sound:"mymusic:spinmeround_song",BPM:256.0}
-S:sound=
-```
-
-The `Sound` and `BPM` tags use the same item NBT as a CraftTweaker disc recipe.
-**BPM is optional.** Remove `,BPM:256.0` from the example to use the default note
-timing. Optional display tags are accepted but do not affect playback. Plain record IDs such as
-`minecraft:record_cat` still work. `record` takes priority over `sound` if both 
-values are set in the config. Invalid item IDs or NBT leave playback silent and produce
-a log warning. `graceTicks` defaults to 4 (0.2 seconds) to bridge short gaps between 
-turns. `fadeTicks` defaults to 6 (0.3 seconds) for fade-in and fade-out. Set both to 0 
-for immediate start/stop. `volume` ranges from 0 (silent) to 100 (full volume).
-Records and Master volume sliders both apply.
-
-`fadeBackgroundMusic` defaults to true. Minecraft background music fades out over
-half a second while a nearby crank is playing, then fades back to the player's
-Music volume afterward. 
-
-Right-click the crank with the configured `clearItem` (default `minecraft:paper`)
-to clear its song and stop its playback. The item used to clear is not consumed on usage.
-Set `clearItem` to another item registry ID in the config to change it.
+Server playback settings determine the shared song and timing. A crank explicitly
+cleared with paper stays silent even when a default song is configured.
 
 ## Multiplayer
 
 **Required on both client and server.**
 
-Everyone listening to custom songs needs the matching resource pack enabled.
+Music plays positionally within 64 blocks. Nearby listeners receive the server's
+playback time. Every listening client needs the matching custom audio, supplied
+through an enabled resource pack or `kubejs/assets`. Server recipe scripts do not
+distribute those files.
 
 ## Separate custom music resource pack
 
-Example setup for a resource pack using ogg files. Most of you will know how to do this,
-but here's an example for any newcomers:
+Custom songs need audio files and a sound event definition on each listening client.
+For a setup without KubeJS, create an ordinary resource pack with this layout:
 
 ```text
 SpinMeRoundDisc.zip
@@ -78,12 +67,14 @@ SpinMeRoundDisc.zip
         thiscouldbeanywhere.ogg
 ```
 
-`pack.mcmeta`:
+Use Ogg Vorbis audio, preferably mono for positional playback. Ogg Opus is unsupported.
+
+`pack.mcmeta` for Minecraft 1.20.1:
 
 ```json
 {
   "pack": {
-    "pack_format": 3,
+    "pack_format": 15,
     "description": "Spin Me Round Discs"
   }
 }
@@ -93,103 +84,117 @@ SpinMeRoundDisc.zip
 
 ```json
 {
-  "spinmeround_song": {
-    "sounds": [
-      {
-        "name": "mymusic:spinmeround",
-        "stream": true
-      }
-    ]
-  },
   "thiscouldbeanywhere_song": {
-    "sounds": [
-      {
-        "name": "mymusic:thiscouldbeanywhere",
-        "stream": true
-      }
-    ]
+    "sounds": [{ "name": "mymusic:thiscouldbeanywhere", "stream": true }]
+  },
+  "spinmeround_song": {
+    "sounds": [{ "name": "mymusic:spinmeround", "stream": true }]
   }
 }
 ```
 
-Each song gets its own event with one audio file in its `sounds` list. Multiple
-files in one list make Minecraft randomly choose between them. The event IDs
-are `mymusic:spinmeround_song` and `mymusic:thiscouldbeanywhere_song`; the `name`
-inside each list points to the audio filename without the `.ogg` extension.
+The event IDs are `mymusic:thiscouldbeanywhere_song` and `mymusic:spinmeround_song`.
+Each `name` points to its `.ogg` filename without the extension. Keep one audio file
+per event so the selected song is predictable.
 
-**BPM is optional.** Songs work without it. To specify a song's BPM, add the
-`BPM` tag to its disc's item NBT using the `/give` or CraftTweaker examples below.
-This tag belongs on the disc, not in the resource pack's `sounds.json`.
+Put the folder or ZIP in each client's `resourcepacks` folder, with `pack.mcmeta` and
+`assets/` at the root, and enable it under Options > Resource Packs. This works with
+either recipe example. CraftTweaker-only setups use this audio layout. The server
+does not need the pack. Missing audio is silent and logged. Press **F3+T** on each
+client after changing its audio assets.
 
-Use Ogg Vorbis, preferably mono for positional playback. Ogg Opus will not work.
-Zip the contents with `pack.mcmeta` and `assets` at the root, put
-`SpinMeRoundDisc.zip` in the instance's `resourcepacks` folder, and enable it in
-Minecraft. Press F3 + T after updating an enabled pack. The server does
-not need the pack. Clients missing the sound remain silent and log a warning.
-For an assignable item referencing this track, use the Compact Disc below.
-A resource pack alone adds no items.
+KubeJS can also load the same audio files directly from `kubejs/assets`, as shown in
+the KubeJS section below.
 
 ## Compact Disc item
 
-The mod also provides `spinmeround:compact_disc` in the Miscellaneous creative tab.
-Set its string NBT tag `Sound` to a resource-pack sound event ID. Use it to assign
-songs to cranks; it cannot be played in a jukebox.
+Find Compact Disc in Tools & Utilities. Its `Sound` tag refers to a sound event in a
+resource pack. Optional `BPM` (greater than 0 and at most 1000) controls note particles.
+Omit `BPM` to use the default note timing. It does not change playback speed.
+There is no built-in crafting recipe; KubeJS or CraftTweaker can add tagged disc outputs.
+Both examples below use the same `spinmeround:compact_disc` item with different song
+tags and display names. The scripting mods are optional.
 
-Example for Minecraft 1.12.2:
+For a quick test without a recipe:
 
-```text
-/give @p spinmeround:compact_disc 1 0 {Sound:"mymusic:spinmeround_song",BPM:256.0,display:{Name:"You Spin Me Round"}}
-/give @p spinmeround:compact_disc 1 0 {Sound:"mymusic:thiscouldbeanywhere_song",BPM:124.0,display:{Name:"This Could Be Anywhere"}}
+```mcfunction
+/give @s spinmeround:compact_disc{Sound:"mymusic:thiscouldbeanywhere_song",BPM:124.0}
+/give @s spinmeround:compact_disc{Sound:"mymusic:spinmeround_song",BPM:256.0}
 ```
 
-The optional numeric `BPM` tag sets the timing of the music note effects without
-changing the song's playback speed. These examples use `256.0` for You Spin Me
-Round and `124.0` for This Could Be Anywhere. Values greater than 0 and up to
-1000 are supported. Omit `BPM` to use the default timing of one note every half
-second, equivalent to 120 BPM at normal game speed.
+The audio setup above is required for these custom event IDs. Right-click a supported
+crank with the disc, then turn it with an empty hand. The disc is not consumed and
+cannot be played in a jukebox.
 
-Right-click an AE2-UEL crank or Extra Utilities 2 Manual Mill with the disc, then use an empty hand to turn it.
-The disc is never consumed, and your song is saved to the crank.
-Blank or invalid tags leave the crank's current
-selection unchanged and show a message. Different discs can use the same item ID
-with different Sound tags and custom display names. No recipe is registered;
-modpacks can add recipes and tagged outputs using their scripting mod.
+## CraftTweaker
 
-## CraftingTweaks
-
-The `BPM` entries are **optional**: remove either `BPM`
-line to use default note timing. The disc will still play its song normally.
+For CraftTweaker on Forge 1.20.1, save this as `scripts/spinmeround_discs.zs` in the
+world host/server instance:
 
 ```zenscript
-val songDisc1 = <spinmeround:compact_disc>.withTag({
+val disc = <item:spinmeround:compact_disc>.withTag({
     Sound: "mymusic:spinmeround_song",
     BPM: 256.0, // Optional: remove this line to use default note timing.
-    display: {Name: "You Spin Me Round"}
+    display: {Name: "{\"text\":\"You Spin Me Round\",\"italic\":false}"}
 });
 
-recipes.addShapeless("spinmeround_song_disc", songDisc1, [
-    <minecraft:iron_ingot>,
-    <minecraft:redstone>,
-    <minecraft:paper>
+craftingTable.addShapeless("spinmeround_song_disc", disc, [
+    <item:minecraft:iron_ingot>,
+    <item:minecraft:redstone>,
+    <item:minecraft:paper>
 ]);
-
-val songDisc2 = <spinmeround:compact_disc>.withTag({
-    Sound: "mymusic:thiscouldbeanywhere_song",
-    BPM: 124.0, // Optional: remove this line to use default note timing.
-    display: {Name: "This Could Be Anywhere"}
-});
-
-recipes.addShapeless("thiscouldbeanywhere_song_disc", songDisc2, [
-    <minecraft:iron_ingot>,
-    <minecraft:lapis_block>,
-    <minecraft:paper>
-]);
-
-mods.jei.JEI.addItem(songDisc1);
-mods.jei.JEI.addItem(songDisc2);
 ```
 
-Restart Minecraft after changing the script. The `Sound` tags must match the
-event IDs in `sounds.json`. The JEI entries make each named disc searchable.
-Existing discs keep their old NBT; craft a fresh disc if you change its sound ID,
-then right-click the crank again to replace its saved selection.
+Craft **iron ingot + redstone + paper**, in any arrangement, to get the named disc.
+Restart the world after changing the script. The `Sound` and optional `BPM` tags work
+the same way as in the KubeJS example below. Provide the audio through a resource
+pack, or through `kubejs/assets` when KubeJS is also installed.
+
+To add another song, add its Ogg file and sound event, then copy a recipe with a unique
+recipe ID, `Sound` value, display name, and ingredient combination. Existing discs keep
+their saved tags; craft a new disc after changing a recipe's song or BPM.
+
+## KubeJS
+
+For KubeJS 6 on Forge 1.20.1, save this as
+`kubejs/server_scripts/spinmeround_discs.js` in the world host/server instance:
+
+```javascript
+ServerEvents.recipes(event => {
+  const disc = Item.of('spinmeround:compact_disc', {
+    Sound: 'mymusic:thiscouldbeanywhere_song',
+    BPM: 124.0, // Optional: remove this line to use default note timing.
+    display: { Name: '{"text":"This Could Be Anywhere","italic":false}' }
+  })
+
+  event.shapeless(disc, [
+    'minecraft:iron_ingot',
+    'minecraft:lapis_block',
+    'minecraft:paper'
+  ]).id('kubejs:spinmeround/this_could_be_anywhere')
+})
+```
+
+Craft **iron ingot + lapis block + paper**, in any arrangement, to get the named disc.
+Restart the world after adding or editing the recipe. Installing KubeJS or changing
+startup scripts requires a full game/server restart.
+
+### Audio files with KubeJS
+
+KubeJS automatically loads its `assets` folder as client resources. You can use loose
+files here without creating or enabling a separate resource-pack ZIP:
+
+```text
+kubejs/
+  assets/
+    mymusic/
+      sounds.json
+      sounds/
+        spinmeround.ogg
+        thiscouldbeanywhere.ogg
+```
+
+Use the same `sounds.json` and Ogg Vorbis files from the resource-pack example above.
+Both recipe scripts can use these assets, including the CraftTweaker recipe when
+KubeJS is also installed. Every listening client needs the same files. Press **F3+T**
+on each client after changing its audio assets.

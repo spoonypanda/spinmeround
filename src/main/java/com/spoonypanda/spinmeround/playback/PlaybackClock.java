@@ -1,42 +1,24 @@
 package com.spoonypanda.spinmeround.playback;
-public final class PlaybackClock {
-    private static final double TICKS_PER_MINUTE = 20 * 60;
-    private int idleTicks;
-    private float fadeGain;
-    private long playheadTicks;
 
-    public PlaybackClock(long playheadTicks) {
-        this.playheadTicks = Math.max(0, playheadTicks);
+/** Server-owned elapsed music time, advancing only while music is sustained or fading. */
+public final class PlaybackClock {
+    private int idleTicks;
+    private float gain;
+    private long ticks;
+
+    public PlaybackClock(long ticks) {
+        this.ticks = Math.max(0, ticks);
     }
 
     public void tick(boolean turning, int graceTicks, int fadeTicks) {
-        tick(turning, graceTicks, fadeTicks, 1);
-    }
-
-    /** A machine can lower the gain limit as its remaining motion runs down. */
-    public void tick(boolean turning, int graceTicks, int fadeTicks, float gainLimit) {
         idleTicks = turning ? 0 : Math.min(idleTicks + 1, graceTicks + 1);
-        boolean shouldSustainPlayback = turning || (fadeGain > 0 && idleTicks <= graceTicks);
-        float fadeStepPerTick = fadeTicks == 0 ? 1 : 1.0F / fadeTicks;
-        fadeGain = shouldSustainPlayback ? Math.min(1, fadeGain + fadeStepPerTick) : Math.max(0, fadeGain - fadeStepPerTick);
-        fadeGain = Math.min(fadeGain, Math.max(0, Math.min(1, gainLimit)));
-        if (fadeGain < 0.0001F) {
-            fadeGain = 0;
-        }
-        if (fadeGain > 0 && playheadTicks < Long.MAX_VALUE) {
-            playheadTicks++;
-        }
+        boolean sustain = turning || (gain > 0 && idleTicks <= graceTicks);
+        float step = fadeTicks == 0 ? 1 : 1.0F / fadeTicks;
+        gain = sustain ? Math.min(1, gain + step) : Math.max(0, gain - step);
+        if (gain < 0.0001F) gain = 0;
+        if (gain > 0 && ticks < Long.MAX_VALUE) ticks++;
     }
 
-    public float fadeGain() {
-        return fadeGain;
-    }
-
-    public long playheadTicks() {
-        return playheadTicks;
-    }
-
-    public static long beatIndexAt(long playheadTicks, double bpm) {
-        return bpm > 0 ? (long) Math.floor(Math.max(0, playheadTicks) * (bpm / TICKS_PER_MINUTE)) : -1;
-    }
+    public float gain() { return gain; }
+    public long ticks() { return ticks; }
 }

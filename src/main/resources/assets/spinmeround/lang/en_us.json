@@ -1,0 +1,13 @@
+{
+  "item.spinmeround.compact_disc": "Compact Disc",
+  "tooltip.spinmeround.blank_disc": "Set the Sound NBT tag to a sound resource ID.",
+  "tooltip.spinmeround.sound": "Sound: %s",
+  "tooltip.spinmeround.bpm": "BPM: %s",
+  "message.spinmeround.invalid_disc": "This disc needs a valid Sound tag, for example mymusic:crank_song.",
+  "message.spinmeround.cleared": "Crank song cleared.",
+  "message.spinmeround.assigned": "Crank song assigned. Turn it with an empty hand to listen.",
+  "message.spinmeround.muted": "Crank music muted.",
+  "message.spinmeround.unmuted": "Crank music unmuted.",
+  "key.spinmeround.mute": "Mute crank music",
+  "key.categories.spinmeround": "Spin Me Round"
+}
