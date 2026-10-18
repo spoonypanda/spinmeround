@@ -1,0 +1,17 @@
+[
+{
+  "modid": "spinmeround",
+  "name": "Spin Me Round",
+  "description": "Use records or custom discs on AE2 hand cranks and Extra Utilities 2 Manual Mills to play music while you work. Can use custom resources via compact discs with custom recipes as well.",
+  "license": "GPL-3.0-only",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Spoony Panda"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
